@@ -2,11 +2,9 @@ $(function() {
     let socket = io(window.socketUrl);
     const urlParams = new URLSearchParams(window.location.search);
     const user = urlParams.get('user') || 'defaultUser';
-    const id = urlParams.get('id') || 'defaultId';
 
     socket.emit("returnAllMessages", user);
     socket.on(`allMsgToClient:${user}`, (msg) => {
-
         arrayMsg = JSON.parse(msg);
 
         let chatContainer = $('#chat-container');
@@ -14,7 +12,7 @@ $(function() {
 
         //itera as mensagens no container
         arrayMsg.forEach((element) => {
-            let content = `<div class="message ${element.sender === user && element.email === id ? 'sender' : 'receiver'}">
+            let content = `<div class="message ${element.sender === user ? 'sender' : 'receiver'}">
                                 <div class="sender-name">${element.sender}</div>
                                 <div>${element.message}</div>
                            </div>`;
@@ -26,13 +24,25 @@ $(function() {
 
     });
 
-    //recebimento de uma nova mensagem
+    //avisa server que um novo usuario entrou na conversa
+    socket.emit("newUserConnect", user);
+    
+    //nova mensagem recebida
     socket.on("msgToClient", (msg) => {
         msgParse = JSON.parse(msg);
-        let content = `<div class="message ${msgParse.sender === user && msgParse.email === id ? 'sender' : 'receiver'}">
+        let content = `<div class="message ${msgParse.sender === user ? 'sender' : 'receiver'}">
                             <div class="sender-name">${msgParse.sender}</div>
                             <div>${msgParse.message}</div>
                        </div>`;
+        $('#chat-container').append(content);
+        $('#chat-container').scrollTop($('#chat-container').prop("scrollHeight"));
+    });
+
+    //notifica novo membro na conversa
+    socket.on("notifyNewConnect", (msg) => {
+        console.log(msg);
+        let content = `<div class="message-enter">${msg}</div>`;
+    
         $('#chat-container').append(content);
         $('#chat-container').scrollTop($('#chat-container').prop("scrollHeight"));
     });
@@ -47,7 +57,6 @@ $(function() {
         const newMessage = {
             sender: user,
             message: message,
-            email: id,
         };
         socket.emit("newMessage", newMessage);
         $('#message-input').val('');
